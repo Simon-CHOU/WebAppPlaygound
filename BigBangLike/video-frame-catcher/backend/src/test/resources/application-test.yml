@@ -1,0 +1,72 @@
+server:
+  port: 0
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: video-frame-catcher-test
+
+  # TestContainers will automatically configure the datasource
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///video_frame_catcher_test
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  security:
+    user:
+      name: test-admin
+      password: test-admin
+      roles: ADMIN
+
+# Test-specific storage configuration
+storage:
+  type: local
+  local:
+    base-path: ./test-storage
+    temp-path: ./test-temp
+
+# FFmpeg configuration for tests
+ffmpeg:
+  path: ffmpeg
+  ffprobe-path: ffprobe
+  frame-extraction:
+    frames-per-second: 2.0  # 更高的帧率用于测试
+    max-parallel-threads: 2
+    gpu:
+      enabled: false  # 测试时禁用GPU
+
+# GPU configuration for tests
+gpu:
+  acceleration:
+    enabled: false
+
+# Image processing for tests
+image:
+  processing:
+    heic-quality: 60  # 更低的质量用于测试
+    thumbnail:
+      width: 100
+      height: 100
+      quality: 50
+    parallel:
+      threads: 2
+      batch-size: 5
+
+# Logging for tests
+logging:
+  level:
+    com.videoframecatcher: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

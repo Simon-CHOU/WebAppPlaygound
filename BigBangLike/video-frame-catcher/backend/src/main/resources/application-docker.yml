@@ -1,0 +1,132 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    multipart:
+      max-file-size: 2GB
+      max-request-size: 2GB
+
+spring:
+  application:
+    name: video-frame-catcher
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/video_frame_catcher}
+    username: ${DB_USERNAME:vfc_user}
+    password: ${DB_PASSWORD:vfc_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        connection:
+          provider_disables_autocommit: true
+
+  security:
+    user:
+      name: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:admin}
+      roles: ADMIN
+
+  threads:
+    virtual:
+      enabled: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# 存储配置
+storage:
+  type: local
+  local:
+    base-path: ${STORAGE_BASE_PATH:/app/storage}
+    temp-path: ${TEMP_PATH:/app/temp}
+
+# FFmpeg配置
+ffmpeg:
+  path: ${FFMPEG_PATH:/usr/bin/ffmpeg}
+  ffprobe-path: ${FFPROBE_PATH:/usr/bin/ffprobe}
+  frame-extraction:
+    frames-per-second: ${FRAME_EXTRACTION_FPS:1.0}
+    max-parallel-threads: ${MAX_PARALLEL_THREADS:4}
+    gpu:
+      enabled: ${GPU_ENABLED:true}
+      preferred-backend: ${GPU_PREFERRED_BACKEND:auto}
+
+# GPU加速配置
+gpu:
+  acceleration:
+    enabled: ${GPU_ACCELERATION_ENABLED:true}
+    intel-openvino:
+      enabled: ${INTEL_OPENVINO_ENABLED:true}
+      device: ${INTEL_OPENVINO_DEVICE:GPU}
+    nvidia-cuda:
+      enabled: ${NVIDIA_CUDA_ENABLED:true}
+      device-count: ${NVIDIA_CUDA_DEVICE_COUNT:1}
+    amd-vulkan:
+      enabled: ${AMD_VULKAN_ENABLED:true}
+
+# 图像处理配置
+image:
+  processing:
+    heic-quality: ${HEIC_QUALITY:80}
+    thumbnail:
+      width: ${THUMBNAIL_WIDTH:200}
+      height: ${THUMBNAIL_HEIGHT:200}
+      quality: ${THUMBNAIL_QUALITY:75}
+    parallel:
+      threads: ${IMAGE_PROCESSING_THREADS:4}
+      batch-size: ${IMAGE_PROCESSING_BATCH_SIZE:10}
+
+# API文档配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.videoframecatcher: ${LOG_LEVEL:INFO}
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /app/logs/video-frame-catcher.log

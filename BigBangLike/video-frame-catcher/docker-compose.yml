@@ -1,0 +1,158 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: vfc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: video_frame_catcher
+      POSTGRES_USER: vfc_user
+      POSTGRES_PASSWORD: vfc_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - vfc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vfc_user -d video_frame_catcher"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端Spring Boot应用
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vfc-backend
+    restart: unless-stopped
+    environment:
+      # 数据库配置
+      DB_USERNAME: vfc_user
+      DB_PASSWORD: vfc_password
+      DB_URL: jdbc:postgresql://postgres:5432/video_frame_catcher
+
+      # 应用配置
+      SPRING_PROFILES_ACTIVE: docker
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+
+      # 存储配置
+      STORAGE_BASE_PATH: /app/storage
+      TEMP_PATH: /app/temp
+
+      # FFmpeg配置
+      FFMPEG_PATH: /usr/bin/ffmpeg
+      FFPROBE_PATH: /usr/bin/ffprobe
+      FRAME_EXTRACTION_FPS: "1.0"
+      MAX_PARALLEL_THREADS: "4"
+
+      # GPU配置
+      GPU_ENABLED: "true"
+      GPU_PREFERRED_BACKEND: auto
+      INTEL_OPENVINO_ENABLED: "true"
+      NVIDIA_CUDA_ENABLED: "true"
+      AMD_VULKAN_ENABLED: "true"
+
+      # 图像处理配置
+      HEIC_QUALITY: "80"
+      THUMBNAIL_WIDTH: "200"
+      THUMBNAIL_HEIGHT: "200"
+      THUMBNAIL_QUALITY: "75"
+      IMAGE_PROCESSING_THREADS: "4"
+      IMAGE_PROCESSING_BATCH_SIZE: "10"
+
+      # 日志配置
+      LOG_LEVEL: INFO
+    volumes:
+      - storage_data:/app/storage
+      - temp_data:/app/temp
+      # 挂载GPU设备 (需要Docker支持)
+      # - /dev/dri:/dev/dri  # Intel GPU
+    ports:
+      - "8080:8080"
+    networks:
+      - vfc-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端React应用
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vfc-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost/api
+      VITE_APP_TITLE: "Video Frame Catcher"
+      VITE_MAX_FILE_SIZE: "2048"
+      VITE_SUPPORTED_VIDEO_FORMATS: ".mp4,.avi,.mov,.mkv"
+      VITE_IMAGE_LOADING_STRATEGY: "lazy"
+      VITE_THUMBNAIL_QUALITY: "75"
+      VITE_THUMBNAIL_WIDTH: "200"
+      VITE_THUMBNAIL_HEIGHT: "200"
+      VITE_PAGE_SIZE: "20"
+      VITE_FRAME_PAGE_SIZE: "50"
+      VITE_ENABLE_GPU_ACCELERATION: "true"
+      VITE_ENABLE_BATCH_OPERATIONS: "true"
+      VITE_ENABLE_VIDEO_PREVIEW: "true"
+    ports:
+      - "80:80"
+    networks:
+      - vfc-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Redis (可选，用于缓存)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: vfc-redis
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+  #   volumes:
+  #     - redis_data:/data
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - vfc-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  storage_data:
+    driver: local
+  temp_data:
+    driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  vfc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
