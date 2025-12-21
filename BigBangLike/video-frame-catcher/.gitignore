@@ -1,0 +1,195 @@
+# Video Frame Catcher Project .gitignore
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Maven/Java
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# Spring Boot
+application-local.properties
+application-local.yml
+logs/
+*.log
+
+# Node.js/React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.eslintcache
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Gatsby files
+.cache/
+public
+
+# Vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Application specific
+storage/
+temp/
+uploads/
+videos/
+frames/
+thumbnails/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# JAR files (keep the main application jar)
+!backend/target/video-frame-catcher-backend-*.jar
+backend/target/*.jar.original
+
+# FFmpeg temporary files
+*.mp4.tmp
+*.avi.tmp
+*.mov.tmp
+*.mkv.tmp
+
+# HEIC conversion temp files
+*.heic.tmp
+*.jpg.tmp
+
+# GPU processing temp files
+gpu_*
+cuda_*
+vulkan_*
+
+# Log files
+*.log
+logs/
+
+# Environment specific
+application-dev.properties
+application-prod.properties
+application-test.properties
+
+# Monitoring and Metrics
+metrics/
+monitoring/
+
+# Backup files
+*.backup
+*.bak
+
+# Git merge conflict files
+*.orig
+
+# vim
+*.vim
+
+# sed
+*.sed
+
+# Test artifacts
+test-results/
+test-output/
+
+# Profiling
+*.hprof
+*.prof
+
+# Memory dumps
+*.dump
+*.dmp

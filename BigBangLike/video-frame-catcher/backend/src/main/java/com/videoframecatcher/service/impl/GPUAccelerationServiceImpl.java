@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -103,7 +103,7 @@ public class GPUAccelerationServiceImpl implements GPUAccelerationService {
                 case INTEL_ARC_OPENVINO:
                     return processWithIntelOpenVINO(inputPath, outputFilename, quality);
                 case NVIDIA_CUDA:
-                    return processWithNVIDIA CUDA(inputPath, outputFilename, quality);
+                    return processWithNVIDIA_CUDA(inputPath, outputFilename, quality);
                 case AMD_VULKAN:
                     return processWithAMDVulkan(inputPath, outputFilename, quality);
                 default:
@@ -153,7 +153,7 @@ public class GPUAccelerationServiceImpl implements GPUAccelerationService {
         }
     }
 
-    private String processWithNVIDIA CUDA(String inputPath, String outputFilename, int quality) {
+    private String processWithNVIDIA_CUDA(String inputPath, String outputFilename, int quality) {
         logger.info("Processing with NVIDIA CUDA");
 
         try {
@@ -278,7 +278,7 @@ public class GPUAccelerationServiceImpl implements GPUAccelerationService {
         }
 
         // 检测NVIDIA CUDA
-        if (nvidiaCudaEnabled && detectNVIDIA CUDA()) {
+        if (nvidiaCudaEnabled && detectNVIDIA_CUDA()) {
             logger.info("NVIDIA CUDA detected");
             return GPUType.NVIDIA_CUDA;
         }
@@ -337,7 +337,7 @@ public class GPUAccelerationServiceImpl implements GPUAccelerationService {
         return false;
     }
 
-    private boolean detectNVIDIA CUDA() {
+    private boolean detectNVIDIA_CUDA() {
         try {
             ProcessBuilder pb = new ProcessBuilder("nvidia-smi");
             Process process = pb.start();

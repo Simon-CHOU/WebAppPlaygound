@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -76,13 +77,12 @@ public class VideoProcessingServiceImpl implements VideoProcessingService {
 
     @Override
     @Async
-    public CompletableFuture<Void> processVideoAsync(Long albumId) {
+    public void processVideoAsync(Long albumId) {
         try {
             processVideo(albumId);
-            return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
             logger.error("Async video processing failed for album: {}", albumId, e);
-            return CompletableFuture.failedFuture(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -267,18 +267,21 @@ public class VideoProcessingServiceImpl implements VideoProcessingService {
             int height = image.getHeight();
             double qualityScore = calculateQualityScore(image);
 
+            // 获取Album对象用于设置关系
+            Album albumEntity = albumRepository.findById(albumId).orElse(null);
+
             // 创建帧对象
             Frame frame = new Frame();
-            frame.setAlbumId(albumId);
+            frame.setAlbum(albumEntity);
             frame.setFilename(frameFilename);
             frame.setFilePath(heicPath);
-            frame.setTimestamp(BigDecimal.valueOf(timestamp).setScale(3, BigDecimal.ROUND_HALF_UP));
+            frame.setTimestamp(BigDecimal.valueOf(timestamp).setScale(3, RoundingMode.HALF_UP));
             frame.setFrameNumber(frameNumber);
             frame.setWidth(width);
             frame.setHeight(height);
-            frame.setFileSize(frameData.length);
+            frame.setFileSize((long) frameData.length);
             frame.setFormat(heicPath.endsWith(".heic") ? "heic" : "jpg");
-            frame.setQualityScore(BigDecimal.valueOf(qualityScore).setScale(2, BigDecimal.ROUND_HALF_UP));
+            frame.setQualityScore(BigDecimal.valueOf(qualityScore).setScale(2, RoundingMode.HALF_UP));
             frame.setThumbnailPath(thumbnailPath);
 
             return frame;

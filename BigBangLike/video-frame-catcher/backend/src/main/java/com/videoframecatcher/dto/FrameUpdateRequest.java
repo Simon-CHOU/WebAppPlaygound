@@ -2,6 +2,8 @@ package com.videoframecatcher.dto;
 
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
+
 public class FrameUpdateRequest {
 
     @NotNull(message = "收藏状态不能为空")

@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(docker:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell:*)",
+      "Bash(mvn:*)",
+      "Bash(ls:*)",
+      "Bash(docker-compose -f docker-compose.yml build)",
+      "Bash(java:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
