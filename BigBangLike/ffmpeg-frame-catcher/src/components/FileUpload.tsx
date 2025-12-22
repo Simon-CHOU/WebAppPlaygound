@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileVideo, AlertCircle } from 'lucide-react';
 
 interface FileUploadProps {
-  onUpload: (file: File) => void;
+  onUpload: (file: File, dataSource: 'supabase' | 'local') => void;
   onProgress: (progress: number) => void;
   uploadProgress?: number;
   isUploading?: boolean;
@@ -21,6 +21,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   error
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dataSource, setDataSource] = useState<'supabase' | 'local'>('local');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -50,7 +51,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       return;
     }
     
-    onUpload(file);
+    onUpload(file, dataSource);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +86,40 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto space-y-6">
+      {/* 存储源选择器 */}
+      <div className="flex justify-center space-x-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="dataSource"
+            value="local"
+            checked={dataSource === 'local'}
+            onChange={() => setDataSource('local')}
+            className="form-radio h-5 w-5 text-blue-600"
+          />
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-700">本地数据库 (Docker PG)</span>
+            <span className="text-xs text-gray-500">数据保存在本地，无费用</span>
+          </div>
+        </label>
+        
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="radio"
+            name="dataSource"
+            value="supabase"
+            checked={dataSource === 'supabase'}
+            onChange={() => setDataSource('supabase')}
+            className="form-radio h-5 w-5 text-green-600"
+          />
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-700">云端数据库 (Supabase)</span>
+            <span className="text-xs text-gray-500">数据同步云端，可能有配额限制</span>
+          </div>
+        </label>
+      </div>
+
       <div
         className={`
           border-2 border-dashed rounded-lg p-8 text-center cursor-pointer

@@ -29,6 +29,10 @@ const PhotoAlbum: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [visibleImages, setVisibleImages] = useState(20); // 初始显示20张图片
+  
+  // 从 URL 参数获取 dataSource
+  const queryParams = new URLSearchParams(window.location.search);
+  const dataSource = queryParams.get('dataSource') || 'supabase';
 
   useEffect(() => {
     fetchAlbumData();
@@ -37,7 +41,7 @@ const PhotoAlbum: React.FC = () => {
   const fetchAlbumData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl(`/album/${albumId}`));
+      const response = await fetch(getApiUrl(`/album/${albumId}?dataSource=${dataSource}`));
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -60,11 +64,14 @@ const PhotoAlbum: React.FC = () => {
     const normalizedPath = path.replace(/\\/g, '/');
     // 如果是请求缩略图，替换扩展名
     const finalPath = isThumb ? normalizedPath.replace(/\.heic$/i, '_thumb.jpg') : normalizedPath;
-    // 移除开头的 albums/ (如果存在，因为静态服务挂载在 /albums)
-    // 数据库存的是 albums/taskId/file，所以直接用即可
-    // 不需要 getApiUrl，因为我们在 vite.config.ts 中配置了 /albums 的代理
-    // 如果是生产环境，可能需要完整的 URL，这里假设 /albums 也是根路径可访问
-    return `/${finalPath.startsWith('/') ? finalPath.slice(1) : finalPath}`;
+    
+    // 如果路径不包含 albums 前缀（例如相对路径），手动拼接
+    // 后端现在存储相对路径，如 "video_name/frame_001.heic"
+    const pathWithPrefix = finalPath.startsWith('albums/') || finalPath.startsWith('/albums/') 
+      ? finalPath 
+      : `albums/${finalPath}`;
+
+    return `/${pathWithPrefix.startsWith('/') ? pathWithPrefix.slice(1) : pathWithPrefix}`;
   };
 
   const handleImageClick = (index: number) => {

@@ -49,7 +49,8 @@ export const ffmpegService = {
       const videoInfo = await this.getVideoInfo(inputPath);
       
       // 构建输出文件路径模式
-      const outputPattern = path.join(outputDir, `${albumName}_%04d.png`);
+      // 使用简单的帧号命名，避免文件名过长问题，albumName 仅用于元数据
+      const outputPattern = path.join(outputDir, `frame_%04d.png`);
       
       // 自动检测编码格式并使用合适的解码器
       // 先尝试检测视频编码格式
@@ -116,7 +117,7 @@ export const ffmpegService = {
       // 获取生成的所有帧文件
       const files = await fs.readdir(outputDir);
       const frameFiles = files
-        .filter(file => file.startsWith(albumName) && file.endsWith('.png'))
+        .filter(file => file.startsWith('frame_') && file.endsWith('.png'))
         .sort();
       
       return frameFiles.map(file => path.join(outputDir, file));

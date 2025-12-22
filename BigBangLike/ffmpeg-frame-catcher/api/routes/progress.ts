@@ -1,14 +1,17 @@
 import express from 'express';
 import { taskService } from '../services/taskService';
 
+import { DataSource } from '../lib/db/DbFactory';
+
 const router = express.Router();
 
 // 查询任务进度
 router.get('/progress/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
+    const dataSource = (req.query.dataSource as DataSource) || 'supabase';
     
-    const task = await taskService.getTask(taskId);
+    const task = await taskService.getTask(taskId, dataSource);
     
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });

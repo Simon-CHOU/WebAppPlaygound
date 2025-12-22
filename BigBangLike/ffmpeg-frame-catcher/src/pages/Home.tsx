@@ -13,7 +13,7 @@ const Home: React.FC = () => {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (file: File, dataSource: 'supabase' | 'local') => {
     try {
       setError(null);
       setIsUploading(true);
@@ -21,6 +21,7 @@ const Home: React.FC = () => {
       
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('dataSource', dataSource);
       
       // 模拟上传进度
       const uploadInterval = setInterval(() => {
@@ -47,11 +48,17 @@ const Home: React.FC = () => {
       const data = await response.json();
       setTaskId(data.taskId);
       setUploadProgress(100);
-      setIsUploading(false);
       setProcessingStatus('pending');
+      setProcessingProgress(0); // 显式重置处理进度
+      
+      // 延迟关闭上传状态，直到第一次获取到处理进度或 1.5s 后
+      // 这样可以避免上传条消失后，处理条因为还没拿到第一次轮询结果而显示 0% 的跳动感
+      setTimeout(() => {
+        setIsUploading(false);
+      }, 1000);
       
       // 开始轮询处理进度
-      pollProgress(data.taskId);
+      pollProgress(data.taskId, dataSource);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : '上传失败');
@@ -60,10 +67,14 @@ const Home: React.FC = () => {
     }
   };
 
-  const pollProgress = async (taskId: string) => {
+  const pollProgress = async (taskId: string, dataSource: 'supabase' | 'local') => {
+    let isPolling = true;
+    
     const checkProgress = async () => {
+      if (!isPolling) return;
+      
       try {
-        const response = await fetch(getApiUrl(`/progress/${taskId}`));
+        const response = await fetch(getApiUrl(`/progress/${taskId}?dataSource=${dataSource}`));
         
         if (!response.ok) {
           throw new Error('获取进度失败');
@@ -71,28 +82,32 @@ const Home: React.FC = () => {
         
         const data = await response.json();
         
+        // 只有当获取到的进度不小于当前显示的进度时才更新，防止进度回跳
+        setProcessingProgress(prev => Math.max(prev, data.progress));
         setProcessingStatus(data.status);
-        setProcessingProgress(data.progress);
         
         if (data.status === 'completed') {
+          isPolling = false;
           // 处理完成，跳转到相册页面
           setTimeout(() => {
-            navigate(`/album/${taskId}`);
+            navigate(`/album/${taskId}?dataSource=${dataSource}`);
           }, 1000);
           return;
         }
         
         if (data.status === 'failed') {
+          isPolling = false;
           setError('处理失败，请重试');
           return;
         }
         
-        // 继续轮询
+        // 只有在当前请求完成后才安排下一次请求，防止并发请求导致的进度回跳
         setTimeout(checkProgress, 1000);
         
       } catch (err) {
         console.error('Progress check error:', err);
-        setTimeout(checkProgress, 2000); // 出错时延长轮询间隔
+        // 出错时也等待后再试
+        setTimeout(checkProgress, 2000);
       }
     };
     
