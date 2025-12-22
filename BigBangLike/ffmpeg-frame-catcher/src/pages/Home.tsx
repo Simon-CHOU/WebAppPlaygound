@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
-
+import { Settings, Folder, Check, X } from 'lucide-react';
 import { getApiUrl } from '../lib/config';
 
 const Home: React.FC = () => {
@@ -12,6 +12,42 @@ const Home: React.FC = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // 下载路径设置
+  const [downloadPath, setDownloadPath] = useState<string>('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempPath, setTempPath] = useState<string>('');
+
+  useEffect(() => {
+    // 初始化时从 localStorage 读取或从后端获取默认路径
+    const savedPath = localStorage.getItem('localDownloadPath');
+    if (savedPath) {
+      setDownloadPath(savedPath);
+      setTempPath(savedPath);
+    } else {
+      fetchDefaultPath();
+    }
+  }, []);
+
+  const fetchDefaultPath = async () => {
+    try {
+      const response = await fetch(getApiUrl('/download/default-path'));
+      if (response.ok) {
+        const data = await response.json();
+        setDownloadPath(data.defaultPath);
+        setTempPath(data.defaultPath);
+        localStorage.setItem('localDownloadPath', data.defaultPath);
+      }
+    } catch (err) {
+      console.error('Failed to fetch default path:', err);
+    }
+  };
+
+  const handleSaveSettings = () => {
+    setDownloadPath(tempPath);
+    localStorage.setItem('localDownloadPath', tempPath);
+    setIsSettingsOpen(false);
+  };
 
   const handleFileUpload = async (file: File, dataSource: 'supabase' | 'local') => {
     try {
@@ -115,8 +151,71 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* 设置按钮 */}
+      <button 
+        onClick={() => setIsSettingsOpen(true)}
+        className="absolute top-6 right-6 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors border border-gray-200"
+        title="下载设置"
+      >
+        <Settings className="w-6 h-6 text-gray-600" />
+      </button>
+
+      {/* 设置模态框 */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <Settings className="w-5 h-5 mr-2" />
+                下载设置
+              </h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                本地下载目录
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-grow">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Folder className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={tempPath}
+                    onChange={(e) => setTempPath(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="例如: C:\Downloads\output"
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                * 请确保后端应用对该目录有写入权限。批量下载相册将使用浏览器默认下载。
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center shadow-sm"
+              >
+                <Check className="w-4 h-4 mr-1.5" />
+                保存设置
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-4xl mx-auto">
         {/* 头部 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">

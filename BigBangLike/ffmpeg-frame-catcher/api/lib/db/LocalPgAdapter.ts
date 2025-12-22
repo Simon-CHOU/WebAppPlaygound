@@ -35,6 +35,7 @@ export class LocalPgAdapter implements DbAdapter {
       const res = await pool.query(query, [taskId]);
       return res.rows[0] || null;
     } catch (err) {
+      console.error('LocalPgAdapter.getTask error:', err);
       return null;
     }
   }

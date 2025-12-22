@@ -5,6 +5,7 @@ import path from 'path';
 import uploadRoutes from './routes/upload';
 import progressRoutes from './routes/progress';
 import albumRoutes from './routes/album';
+import downloadRoutes from './routes/download';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ export function createApp() {
   app.use('/api', uploadRoutes);
   app.use('/api', progressRoutes);
   app.use('/api', albumRoutes);
+  app.use('/api', downloadRoutes);
   
   // 健康检查
   app.get('/health', (req, res) => {

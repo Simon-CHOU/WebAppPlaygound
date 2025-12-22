@@ -42,6 +42,24 @@ const PhotoAlbum: React.FC = () => {
     fetchAlbumData();
   }, [albumId]);
 
+  // 键盘导航支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImageIndex === null) return;
+
+      if (e.key === 'ArrowLeft') {
+        handlePrevious();
+      } else if (e.key === 'ArrowRight') {
+        handleNext();
+      } else if (e.key === 'Escape') {
+        handleClosePreview();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImageIndex, album]);
+
   const fetchAlbumData = async () => {
     try {
       setLoading(true);
@@ -140,32 +158,57 @@ const PhotoAlbum: React.FC = () => {
     }
   };
 
-  const downloadSingle = async (image: ImageData) => {
-    try {
-      const url = getImageUrl(image.filePath, false);
-      const response = await fetch(url);
-      const blob = await response.blob();
-      
-      let downloadName = '';
-      if (namingMode === 'frame') {
-        downloadName = `frame_${image.frameNumber}_of_${album?.totalFrames}.heic`;
-      } else {
-        // 将时间戳中的 : 和 . 替换为下划线或连字符，避免文件名非法
-        const safeTimestamp = image.timestamp?.replace(/[:.]/g, '-') || `frame_${image.frameNumber}`;
-        downloadName = `${safeTimestamp}.heic`;
-      }
+  const getDownloadFilename = (image: ImageData) => {
+    if (namingMode === 'frame') {
+      return `frame_${image.frameNumber}_of_${album?.totalFrames}.heic`;
+    } else {
+      const safeTimestamp = image.timestamp?.replace(/[:.]/g, '-') || `frame_${image.frameNumber}`;
+      return `${safeTimestamp}.heic`;
+    }
+  };
 
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (err) {
-      console.error('Download failed:', err);
-      alert('下载失败');
+  const downloadSingle = async (image: ImageData) => {
+    const localPath = localStorage.getItem('localDownloadPath');
+    
+    if (localPath) {
+      // 使用后端本地保存
+      try {
+        const response = await fetch(getApiUrl('/download/local'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: [{ path: image.filePath, name: getDownloadFilename(image) }],
+            targetDir: localPath
+          })
+        });
+        
+        if (!response.ok) throw new Error('保存失败');
+        
+        // 可选：显示成功提示
+      } catch (err) {
+        console.error('Local save failed:', err);
+        alert('保存到本地目录失败，请检查目录权限或设置。');
+      }
+    } else {
+      // 回退到浏览器下载
+      try {
+        const url = getImageUrl(image.filePath, false);
+        const response = await fetch(url);
+        const blob = await response.blob();
+        
+        const downloadName = getDownloadFilename(image);
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = downloadName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (err) {
+        console.error('Download failed:', err);
+        alert('下载失败');
+      }
     }
   };
 
@@ -173,14 +216,49 @@ const PhotoAlbum: React.FC = () => {
     if (selectedImageIds.size === 0) return;
     
     const selectedImages = album?.images.filter(img => selectedImageIds.has(img.id)) || [];
-    
-    // 由于浏览器安全限制，批量下载通常需要打包成 ZIP 或循环触发下载
-    // 这里采用循环触发方式，对于少量图片比较方便
-    for (const image of selectedImages) {
-      await downloadSingle(image);
-      // 稍微延迟一下，防止浏览器拦截多个弹出窗口
-      await newSetTimeout(500);
+    const localPath = localStorage.getItem('localDownloadPath');
+
+    if (localPath) {
+      try {
+        const response = await fetch(getApiUrl('/download/local'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: selectedImages.map(img => ({ 
+              path: img.filePath, 
+              name: getDownloadFilename(img) 
+            })),
+            targetDir: localPath
+          })
+        });
+        
+        if (!response.ok) throw new Error('批量保存失败');
+        
+        const data = await response.json();
+        const successCount = data.results.filter((r: any) => r.status === 'success').length;
+        alert(`成功保存 ${successCount} 张图片到 ${localPath}`);
+      } catch (err) {
+        console.error('Batch local save failed:', err);
+        alert('批量保存失败');
+      }
+    } else {
+      // 如果没有配置本地路径，仍然使用旧的循环下载（但这会触发很多弹窗，所以最好还是提示配置路径）
+      if (selectedImages.length > 10) {
+        if (!confirm(`将触发 ${selectedImages.length} 个下载弹窗，可能会导致浏览器卡顿。建议在主页配置“本地下载目录”以实现静默保存。是否继续？`)) {
+          return;
+        }
+      }
+      for (const image of selectedImages) {
+        await downloadSingle(image);
+        await newSetTimeout(500);
+      }
     }
+  };
+
+  const downloadFullAlbumZip = () => {
+    if (!album) return;
+    const zipUrl = getApiUrl(`/album/${albumId}/zip?dataSource=${dataSource}`);
+    window.location.href = zipUrl;
   };
 
   // 模拟 SetTimeout 的 Promise 版本
@@ -297,21 +375,7 @@ const PhotoAlbum: React.FC = () => {
                 </button>
               ) : (
                 <button 
-                  onClick={() => {
-                    if (album) {
-                      setSelectedImageIds(new Set(album.images.map(img => img.id)));
-                      // 这里的 setSelectedImageIds 是异步的，不能直接调用 downloadBatch
-                      // 我们直接下载所有
-                      const allImages = album.images;
-                      const downloadAll = async () => {
-                        for (const image of allImages) {
-                          await downloadSingle(image);
-                          await newSetTimeout(500);
-                        }
-                      };
-                      downloadAll();
-                    }
-                  }}
+                  onClick={downloadFullAlbumZip}
                   className="flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors shadow-sm"
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -503,11 +567,15 @@ const PhotoAlbum: React.FC = () => {
                   </div>
                   
                   <button
-                    onClick={() => downloadSingle(album.images[selectedImageIndex!])}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadSingle(album.images[selectedImageIndex!]);
+                    }}
                     className="flex items-center px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                    title="下载当前帧"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    下载当前帧
+                    <span className="ml-2 hidden sm:inline">下载当前帧</span>
                   </button>
                 </div>
               </div>
