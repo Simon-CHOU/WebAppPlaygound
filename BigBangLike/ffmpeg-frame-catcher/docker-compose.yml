@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"  # Vite dev server
+      - "3001:3001"  # Express API server
+    environment:
+      - NODE_ENV=development
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - PORT=3001
+    volumes:
+      - ./uploads:/app/uploads
+      - ./albums:/app/albums
+      - ./src:/app/src
+      - ./api:/app/api
+    depends_on:
+      - ffmpeg
+    devices:
+      - /dev/dri:/dev/dri  # Intel GPU设备访问
+    privileged: true  # 需要特权模式访问GPU
+    
+  ffmpeg:
+    image: jrottenberg/ffmpeg:6.0-ubuntu
+    volumes:
+      - ./uploads:/uploads
+      - ./albums:/albums
+    command: tail -f /dev/null
+    devices:
+      - /dev/dri:/dev/dri
+    privileged: true
