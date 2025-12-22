@@ -26,6 +26,7 @@ router.get('/album/:albumId', async (req, res) => {
       name: task.album_name,
       totalFrames: task.total_frames,
       resolution: task.resolution,
+      fps: 30, // 默认 30fps，实际可以从 ffprobe 获取并存入 tasks 表
       createdAt: task.created_at,
       images: images.map(img => ({
         id: img.id,

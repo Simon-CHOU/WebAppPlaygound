@@ -17,7 +17,8 @@ export function createApp() {
   
   // 静态文件服务
   const albumsDir = process.env.ALBUMS_DIR || 'albums';
-  app.use('/albums', express.static(albumsDir));
+  app.use('/api/albums', express.static(albumsDir));
+  app.use('/albums', express.static(albumsDir)); // 保留原有的，防止其他地方引用
   
   // API路由
   app.use('/api', uploadRoutes);
